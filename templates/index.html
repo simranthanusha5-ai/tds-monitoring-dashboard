@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>TDS Monitor | Water Quality Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, Arial, sans-serif;
+            background: #f4f7fb;
+            color: #172033;
+        }
+
+        /* =========================
+           LAYOUT
+        ========================= */
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* =========================
+           SIDEBAR
+        ========================= */
+
+        .sidebar {
+            width: 245px;
+            background: #0b1730;
+            color: white;
+            padding: 28px 18px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 5px 10px 35px;
+        }
+
+        .brand-icon {
+            width: 43px;
+            height: 43px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #20c9d6, #2878f0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 8px 20px rgba(32, 201, 214, 0.25);
+        }
+
+        .brand h2 {
+            font-size: 18px;
+            letter-spacing: 0.3px;
+        }
+
+        .brand span {
+            display: block;
+            color: #91a0bc;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+
+        .nav-title {
+            color: #65728e;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.3px;
+            padding: 0 12px;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .nav-item {
+            text-decoration: none;
+            color: #9ba8c0;
+            padding: 12px 13px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(55, 135, 245, 0.14);
+            color: white;
+        }
+
+        .nav-item.active {
+            box-shadow: inset 3px 0 0 #28c7d5;
+        }
+
+        .nav-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            padding: 15px 10px 5px;
+        }
+
+        .sidebar-status {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            border-radius: 13px;
+            padding: 15px;
+        }
+
+        .sidebar-status-label {
+            color: #72809b;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .online {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #29d391;
+            box-shadow: 0 0 0 4px rgba(41,211,145,0.1);
+        }
+
+        /* =========================
+           MAIN
+        ========================= */
+
+        .main {
+            margin-left: 245px;
+            width: calc(100% - 245px);
+            padding: 30px 35px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 28px;
+        }
+
+        .page-title h1 {
+            font-size: 27px;
+            font-weight: 750;
+            color: #16213b;
+        }
+
+        .page-title p {
+            color: #7a879d;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #e5eaf1;
+            padding: 9px 13px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #526078;
+            box-shadow: 0 3px 12px rgba(20,40,80,0.04);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #20c98b;
+            border-radius: 50%;
+        }
+
+        /* =========================
+           FLASH
+        ========================= */
+
+        .flash {
+            background: #e9fbf4;
+            color: #087b53;
+            border: 1px solid #b9eed9;
+            padding: 13px 16px;
+            border-radius: 11px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        /* =========================
+           UPLOAD
+        ========================= */
+
+        .upload-card {
+            background: white;
+            border: 1px solid #e7ebf2;
+            border-radius: 16px;
+            padding: 18px 20px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            box-shadow: 0 5px 18px rgba(20, 40, 80, 0.035);
+        }
+
+        .upload-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .upload-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            background: #edf5ff;
+            color: #3478e5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+        }
+
+        .upload-info h3 {
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .upload-info p {
+            color: #8a95a8;
+            font-size: 11px;
+        }
+
+        .upload-form {
+            display: flex;
+            gap: 9px;
+            align-items: center;
+        }
+
+        .file-input {
+            max-width: 250px;
+            font-size: 12px;
+            color: #68758a;
+        }
+
+        .upload-button {
+            border: none;
+            background: #1769e0;
+            color: white;
+            padding: 10px 17px;
+            border-radius: 9px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 650;
+            transition: 0.2s;
+        }
+
+        .upload-button:hover {
+            background: #1259c0;
+            transform: translateY(-1px);
+        }
+
+        /* =========================
+           KPI CARDS
+        ========================= */
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .kpi {
+            background: white;
+            border: 1px solid #e7ebf2;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 5px 18px rgba(20, 40, 80, 0.035);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi::after {
+            content: "";
+            position: absolute;
+            width: 75px;
+            height: 75px;
+            right: -28px;
+            top: -28px;
+            border-radius: 50%;
+            background: #f1f7ff;
+        }
+
+        .kpi-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            color: #7d899e;
+            font-weight: 650;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: #eef6ff;
+            color: #2876df;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            z-index: 1;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 760;
+            margin-top: 17px;
+            color: #15213a;
+        }
+
+        .kpi-unit {
+            font-size: 12px;
+            color: #8994a7;
+            font-weight: 500;
+        }
+
+        .kpi-note {
+            margin-top: 7px;
+            font-size: 11px;
+            color: #8a96a8;
+        }
+
+        /* =========================
+           STATUS STRIP
+        ========================= */
+
+        .status-strip {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background: white;
+            border: 1px solid #e7ebf2;
+            border-radius: 15px;
+            padding: 17px 19px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .status-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .status-card-icon.high {
+            background: #fff0f0;
+            color: #e44c4c;
+        }
+
+        .status-card-icon.medium {
+            background: #fff7e6;
+            color: #d98a16;
+        }
+
+        .status-card-icon.low {
+            background: #eafaf3;
+            color: #1ca66c;
+        }
+
+        .status-card-text {
+            flex: 1;
+        }
+
+        .status-card-text span {
+            color: #8a95a7;
+            font-size: 11px;
+        }
+
+        .status-card-text strong {
+            display: block;
+            margin-top: 3px;
+            font-size: 17px;
+        }
+
+        /* =========================
+           CONTENT GRID
+        ========================= */
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(280px, 0.85fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e7ebf2;
+            border-radius: 17px;
+            box-shadow: 0 5px 18px rgba(20, 40, 80, 0.035);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 21px 13px;
+        }
+
+        .card-header h2 {
+            font-size: 15px;
+            color: #18243c;
+        }
+
+        .card-header p {
+            color: #8b96a9;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .chart-wrap {
+            height: 365px;
+            padding: 0 18px 18px;
+        }
+
+        /* =========================
+           SYSTEM STATUS
+        ========================= */
+
+        .system-card {
+            padding-bottom: 20px;
+        }
+
+        .system-main {
+            margin: 7px 20px 20px;
+            border-radius: 14px;
+            padding: 20px;
+            background: #fff8e8;
+            border: 1px solid #f5dfad;
+        }
+
+        .system-main.alert {
+            background: #fff0f0;
+            border-color: #f2c4c4;
+        }
+
+        .system-main.normal {
+            background: #eafaf3;
+            border-color: #bcebd5;
+        }
+
+        .system-label {
+            color: #8c7b55;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-top: 10px;
+        }
+
+        .status-circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e9a51d;
+            box-shadow: 0 0 0 5px rgba(233,165,29,0.12);
+        }
+
+        .status-circle.alert {
+            background: #e44d4d;
+        }
+
+        .status-circle.normal {
+            background: #1eb879;
+        }
+
+        .system-status strong {
+            font-size: 24px;
+            color: #2d2b25;
+        }
+
+        .system-note {
+            color: #857b68;
+            font-size: 11px;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        .threshold-box {
+            margin: 0 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #f7f9fc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .threshold-box span {
+            font-size: 11px;
+            color: #7f8a9d;
+        }
+
+        .threshold-box strong {
+            font-size: 18px;
+            color: #18243c;
+        }
+
+        .mini-info {
+            margin: 18px 20px 0;
+            padding-top: 17px;
+            border-top: 1px solid #edf0f5;
+        }
+
+        .mini-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 7px 0;
+            font-size: 12px;
+        }
+
+        .mini-row span {
+            color: #8994a7;
+        }
+
+        .mini-row strong {
+            color: #2b3850;
+        }
+
+        /* =========================
+           ALERTS
+        ========================= */
+
+        .alerts-card {
+            margin-bottom: 20px;
+        }
+
+        .alert-list {
+            padding: 0 20px 20px;
+            display: grid;
+            gap: 9px;
+        }
+
+        .alert-item {
+            display: grid;
+            grid-template-columns: 42px 1fr auto;
+            align-items: center;
+            gap: 13px;
+            padding: 13px;
+            border: 1px solid #edf0f5;
+            border-radius: 11px;
+            transition: 0.2s;
+        }
+
+        .alert-item:hover {
+            background: #fafbfd;
+        }
+
+        .alert-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .alert-icon.high {
+            background: #fff0f0;
+            color: #df4848;
+        }
+
+        .alert-icon.medium {
+            background: #fff7e8;
+            color: #d78a18;
+        }
+
+        .alert-content strong {
+            display: block;
+            font-size: 12px;
+            color: #26334b;
+        }
+
+        .alert-content span {
+            display: block;
+            font-size: 10px;
+            color: #929daf;
+            margin-top: 4px;
+        }
+
+        .risk-badge {
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 9px;
+            font-weight: 750;
+            letter-spacing: 0.5px;
+        }
+
+        .risk-high {
+            background: #fff0f0;
+            color: #d84646;
+        }
+
+        .risk-medium {
+            background: #fff7e7;
+            color: #c67a11;
+        }
+
+        /* =========================
+           TABLE
+        ========================= */
+
+        .table-card {
+            overflow: hidden;
+            margin-bottom: 25px;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #8490a4;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            text-align: left;
+            padding: 12px 20px;
+            font-weight: 700;
+            border-top: 1px solid #edf0f4;
+            border-bottom: 1px solid #edf0f4;
+        }
+
+        td {
+            padding: 13px 20px;
+            font-size: 12px;
+            color: #445169;
+            border-bottom: 1px solid #f0f2f6;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: #fafbfd;
+        }
+
+        .ppm {
+            font-weight: 700;
+            color: #25334c;
+        }
+
+        .rate {
+            font-weight: 650;
+        }
+
+        .footer {
+            text-align: center;
+            color: #9aa4b4;
+            font-size: 10px;
+            padding: 5px 0 20px;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 1100px) {
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+        @media (max-width: 800px) {
+
+            .sidebar {
+                width: 70px;
+                padding: 20px 10px;
+            }
+
+            .brand {
+                justify-content: center;
+                padding: 5px 0 30px;
+            }
+
+            .brand-text,
+            .nav-title,
+            .nav-item span,
+            .sidebar-bottom {
+                display: none;
+            }
+
+            .nav-item {
+                justify-content: center;
+                padding: 13px;
+            }
+
+            .main {
+                margin-left: 70px;
+                width: calc(100% - 70px);
+                padding: 22px 18px;
+            }
+
+            .status-strip {
+                grid-template-columns: 1fr;
+            }
+
+            .upload-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .upload-form {
+                width: 100%;
+            }
+
+            .file-input {
+                max-width: none;
+                flex: 1;
+            }
+
+        }
+
+        @media (max-width: 600px) {
+
+            .topbar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .top-right {
+                width: 100%;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .upload-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .upload-button {
+                width: 100%;
+            }
+
+            .chart-wrap {
+                height: 300px;
+            }
+
+            .alert-item {
+                grid-template-columns: 38px 1fr;
+            }
+
+            .alert-item .risk-badge {
+                grid-column: 2;
+                justify-self: start;
+            }
+
+        }
+
+    </style>
+</head>
+
+
+<body>
+
+<div class="app">
+
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                💧
+            </div>
+
+            <div class="brand-text">
+                <h2>TDS Monitor</h2>
+                <span>Water Quality System</span>
+            </div>
+
+        </div>
+
+
+        <div class="nav-title">
+            MONITORING
+        </div>
+
+        <nav class="nav">
+
+            <a href="#dashboard" class="nav-item active">
+                <div class="nav-icon">▦</div>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="#forecast" class="nav-item">
+                <div class="nav-icon">◔</div>
+                <span>Forecast</span>
+            </a>
+
+            <a href="#alerts" class="nav-item">
+                <div class="nav-icon">⚠</div>
+                <span>Alerts</span>
+            </a>
+
+            <a href="#upload" class="nav-item">
+                <div class="nav-icon">↑</div>
+                <span>Upload Data</span>
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <div class="sidebar-status">
+
+                <div class="sidebar-status-label">
+                    System
+                </div>
+
+                <div class="online">
+                    <div class="online-dot"></div>
+                    Data pipeline active
+                </div>
+
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =========================
+         MAIN CONTENT
+    ========================== -->
+
+    <main class="main" id="dashboard">
+
+
+        <!-- TOP BAR -->
+
+        <div class="topbar">
+
+            <div class="page-title">
+
+                <h1>TDS Monitoring Dashboard</h1>
+
+                <p>
+                    Water quality analytics, forecast & historical spike monitoring
+                </p>
+
+            </div>
+
+
+            <div class="top-right">
+
+                <div class="live-badge">
+
+                    <div class="live-dot"></div>
+
+                    Monitoring Active
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- FLASH MESSAGE -->
+
+        {% with messages = get_flashed_messages() %}
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div class="flash">
+                        ✓ {{ message }}
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        <!-- =========================
+             UPLOAD
+        ========================== -->
+
+        <section class="upload-card" id="upload">
+
+            <div class="upload-info">
+
+                <div class="upload-icon">
+                    ↑
+                </div>
+
+                <div>
+
+                    <h3>Upload TDS Dataset</h3>
+
+                    <p>
+                        Upload an Excel file to regenerate the 7-day forecast
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <form
+                class="upload-form"
+                action="/upload"
+                method="POST"
+                enctype="multipart/form-data"
+            >
+
+                <input
+                    class="file-input"
+                    type="file"
+                    name="file"
+                    accept=".xlsx"
+                    required
+                >
+
+                <button
+                    class="upload-button"
+                    type="submit"
+                >
+                    Upload & Analyze
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- =========================
+             KPI CARDS
+        ========================== -->
+
+        <section class="kpi-grid">
+
+
+            <div class="kpi">
+
+                <div class="kpi-top">
+
+                    <div class="kpi-label">
+                        Current TDS
+                    </div>
+
+                    <div class="kpi-icon">
+                        💧
+                    </div>
+
+                </div>
+
+                <div class="kpi-value">
+                    {{ current_tds }}
+                    <span class="kpi-unit">ppm</span>
+                </div>
+
+                <div class="kpi-note">
+                    Last reading · {{ current_time }}
+                </div>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <div class="kpi-top">
+
+                    <div class="kpi-label">
+                        Highest Forecast
+                    </div>
+
+                    <div class="kpi-icon">
+                        ↗
+                    </div>
+
+                </div>
+
+                <div class="kpi-value">
+                    {{ highest_prediction }}
+                    <span class="kpi-unit">ppm</span>
+                </div>
+
+                <div class="kpi-note">
+                    Maximum predicted TDS
+                </div>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <div class="kpi-top">
+
+                    <div class="kpi-label">
+                        Forecast Average
+                    </div>
+
+                    <div class="kpi-icon">
+                        ≈
+                    </div>
+
+                </div>
+
+                <div class="kpi-value">
+                    {{ average_prediction }}
+                    <span class="kpi-unit">ppm</span>
+                </div>
+
+                <div class="kpi-note">
+                    Next 7 days
+                </div>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <div class="kpi-top">
+
+                    <div class="kpi-label">
+                        Historical Spikes
+                    </div>
+
+                    <div class="kpi-icon">
+                        ⚡
+                    </div>
+
+                </div>
+
+                <div class="kpi-value">
+                    {{ historical_spikes }}
+                </div>
+
+                <div class="kpi-note">
+                    Readings above {{ threshold }} ppm
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             RISK SUMMARY
+        ========================== -->
+
+        <section class="status-strip">
+
+
+            <div class="status-card">
+
+                <div class="status-card-icon high">
+                    ⚠
+                </div>
+
+                <div class="status-card-text">
+
+                    <span>High historical risk</span>
+
+                    <strong>
+                        {{ high_risk }} hours
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="status-card">
+
+                <div class="status-card-icon medium">
+                    ◐
+                </div>
+
+                <div class="status-card-text">
+
+                    <span>Medium historical risk</span>
+
+                    <strong>
+                        {{ medium_risk }} hours
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="status-card">
+
+                <div class="status-card-icon low">
+                    ✓
+                </div>
+
+                <div class="status-card-text">
+
+                    <span>Low historical risk</span>
+
+                    <strong>
+                        {{ low_risk }} hours
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- =========================
+             CHART + SYSTEM STATUS
+        ========================== -->
+
+        <section class="content-grid" id="forecast">
+
+
+            <!-- CHART -->
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <h2>Actual TDS vs 7-Day Forecast</h2>
+
+                        <p>
+                            Historical readings followed by expected hourly TDS
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="chart-wrap">
+
+                    <canvas id="tdsChart"></canvas>
+
+                </div>
+
+            </div>
+
+
+            <!-- SYSTEM STATUS -->
+
+            <div class="card system-card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <h2>System Status</h2>
+
+                        <p>Current monitoring condition</p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="system-main
+                    {% if system_status == 'ALERT' %}
+                        alert
+                    {% elif system_status == 'NORMAL' %}
+                        normal
+                    {% endif %}
+                ">
+
+                    <div class="system-label">
+                        Current State
+                    </div>
+
+
+                    <div class="system-status">
+
+                        <div class="status-circle
+                            {% if system_status == 'ALERT' %}
+                                alert
+                            {% elif system_status == 'NORMAL' %}
+                                normal
+                            {% endif %}
+                        "></div>
+
+                        <strong>
+                            {{ system_status }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="system-note">
+
+                        {% if system_status == "ALERT" %}
+
+                            Current TDS is above the configured threshold.
+
+                        {% elif system_status == "MONITOR" %}
+
+                            Historical spike-risk periods require continued monitoring.
+
+                        {% else %}
+
+                            No immediate threshold concern detected.
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                <div class="threshold-box">
+
+                    <span>
+                        Configured Threshold
+                    </span>
+
+                    <strong>
+                        {{ threshold }} ppm
+                    </strong>
+
+                </div>
+
+
+                <div class="mini-info">
+
+                    <div class="mini-row">
+
+                        <span>
+                            Predicted breaches
+                        </span>
+
+                        <strong>
+                            {{ predicted_breaches }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="mini-row">
+
+                        <span>
+                            Current reading
+                        </span>
+
+                        <strong>
+                            {{ current_tds }} ppm
+                        </strong>
+
+                    </div>
+
+
+                    <div class="mini-row">
+
+                        <span>
+                            Forecast horizon
+                        </span>
+
+                        <strong>
+                            7 days
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             ALERTS
+        ========================== -->
+
+        <section class="card alerts-card" id="alerts">
+
+            <div class="card-header">
+
+                <div>
+
+                    <h2>Historical Spike-Risk Alerts</h2>
+
+                    <p>
+                        Future time periods with historical spike activity
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="alert-list">
+
+                {% if alerts %}
+
+                    {% for alert in alerts %}
+
+                        <div class="alert-item">
+
+                            <div class="alert-icon
+                                {% if alert.Risk == 'HIGH' %}
+                                    high
+                                {% else %}
+                                    medium
+                                {% endif %}
+                            ">
+
+                                {% if alert.Risk == "HIGH" %}
+                                    ⚠
+                                {% else %}
+                                    !
+                                {% endif %}
+
+                            </div>
+
+
+                            <div class="alert-content">
+
+                                <strong>
+                                    {{ alert.Timestamp }}
+                                </strong>
+
+                                <span>
+                                    Expected TDS: {{ alert.Predicted_TDS }} ppm
+                                    · Historical spike rate:
+                                    {{ alert.Spike_Rate }}%
+                                </span>
+
+                            </div>
+
+
+                            <div class="risk-badge
+                                {% if alert.Risk == 'HIGH' %}
+                                    risk-high
+                                {% else %}
+                                    risk-medium
+                                {% endif %}
+                            ">
+
+                                {{ alert.Risk }}
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <div style="
+                        padding:20px;
+                        color:#8994a7;
+                        font-size:12px;
+                    ">
+                        No historical spike-risk periods detected.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             FORECAST TABLE
+        ========================== -->
+
+        <section class="card table-card">
+
+            <div class="card-header">
+
+                <div>
+
+                    <h2>Forecast Details</h2>
+
+                    <p>
+                        Upcoming hourly TDS forecast and historical risk
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="table-scroll">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Timestamp
+                            </th>
+
+                            <th>
+                                Expected TDS
+                            </th>
+
+                            <th>
+                                Historical Max
+                            </th>
+
+                            <th>
+                                Spike Rate
+                            </th>
+
+                            <th>
+                                Risk
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for row in forecast_rows %}
+
+                            <tr>
+
+                                <td>
+                                    {{ row.Timestamp }}
+                                </td>
+
+                                <td class="ppm">
+                                    {{ row.Predicted_TDS }} ppm
+                                </td>
+
+                                <td>
+                                    {{ row.Historical_Max }} ppm
+                                </td>
+
+                                <td class="rate">
+                                    {{ (row.Spike_Rate * 100)|round(1) }}%
+                                </td>
+
+                                <td>
+
+                                    {% if row.Risk == "HIGH" %}
+
+                                        <span class="risk-badge risk-high">
+                                            HIGH
+                                        </span>
+
+                                    {% elif row.Risk == "MEDIUM" %}
+
+                                        <span class="risk-badge risk-medium">
+                                            MEDIUM
+                                        </span>
+
+                                    {% else %}
+
+                                        <span
+                                            class="risk-badge"
+                                            style="
+                                                background:#eafaf3;
+                                                color:#168a5c;
+                                            "
+                                        >
+                                            LOW
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <div class="footer">
+
+            TDS Monitoring & Forecast System · Historical hourly baseline analysis
+
+        </div>
+
+
+    </main>
+
+</div>
+
+
+<!-- =========================
+     CHART
+========================= -->
+
+<script>
+
+const labels =
+    {{ chart_labels | tojson }};
+
+const actualValues =
+    {{ chart_actual_values | tojson }};
+
+const forecastValues =
+    {{ chart_forecast_values | tojson }};
+
+const thresholdValues =
+    {{ chart_threshold_values | tojson }};
+
+
+const ctx =
+    document
+        .getElementById("tdsChart")
+        .getContext("2d");
+
+
+new Chart(ctx, {
+
+    type: "line",
+
+    data: {
+
+        labels: labels,
+
+        datasets: [
+
+            {
+                label: "Actual TDS",
+
+                data: actualValues,
+
+                borderWidth: 2.5,
+
+                tension: 0.35,
+
+                pointRadius: 2,
+
+                pointHoverRadius: 5,
+
+                spanGaps: false
+            },
+
+
+            {
+                label: "7-Day Forecast",
+
+                data: forecastValues,
+
+                borderWidth: 2.5,
+
+                borderDash: [6, 5],
+
+                tension: 0.35,
+
+                pointRadius: 1.5,
+
+                pointHoverRadius: 5,
+
+                spanGaps: false
+            },
+
+
+            {
+                label: "Threshold",
+
+                data: thresholdValues,
+
+                borderWidth: 2,
+
+                borderDash: [9, 7],
+
+                pointRadius: 0,
+
+                spanGaps: true
+            }
+
+        ]
+
+    },
+
+
+    options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        interaction: {
+
+            intersect: false,
+
+            mode: "index"
+
+        },
+
+
+        plugins: {
+
+            legend: {
+
+                display: true,
+
+                position: "top",
+
+                labels: {
+
+                    usePointStyle: true,
+
+                    padding: 18,
+
+                    font: {
+                        size: 11
+                    }
+
+                }
+
+            },
+
+            tooltip: {
+
+                backgroundColor: "#17233d",
+
+                padding: 12,
+
+                titleFont: {
+                    size: 12
+                },
+
+                bodyFont: {
+                    size: 11
+                },
+
+                cornerRadius: 9
+
+            }
+
+        },
+
+
+        scales: {
+
+            y: {
+
+                beginAtZero: false,
+
+                title: {
+
+                    display: true,
+
+                    text: "TDS (ppm)",
+
+                    font: {
+                        size: 11
+                    }
+
+                },
+
+                grid: {
+
+                    color: "#edf0f5"
+
+                },
+
+                ticks: {
+
+                    font: {
+                        size: 10
+                    }
+
+                }
+
+            },
+
+
+            x: {
+
+                grid: {
+
+                    display: false
+
+                },
+
+                ticks: {
+
+                    maxTicksLimit: 16,
+
+                    font: {
+                        size: 9
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+});
+
+</script>
+
+
+</body>
+
+</html>
